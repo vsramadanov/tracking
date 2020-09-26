@@ -27,3 +27,13 @@ def __generate_linear_cols(T, depth, target, dim):
 def linear(T, depth, dim):
     """Returns transition state matrix for linear model"""
     return __generate_linear_cols(T, depth, 0, dim)
+
+
+def constant_turn_2d(T, wk):
+    """Returns 2d state transition matrix with constant turn wk [rad/sec]"""
+    return np.array([
+        [1, 0, np.sin(wk * T) / wk, (np.cos(wk * T) - 1) / wk],
+        [0, 1, (1 - np.cos(wk * T)) / wk, np.sin(wk * T) / wk],
+        [0, 0, np.cos(wk * T), -np.sin(wk * T)],
+        [0, 0, np.sin(wk * T), np.cos(wk * T)],
+    ])

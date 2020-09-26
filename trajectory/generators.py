@@ -6,6 +6,8 @@
 import numpy as np
 from functools import cached_property
 
+import kalman.models
+
 
 class TrajectoryGenerator:
     """Class description"""
@@ -23,20 +25,7 @@ class TrajectoryGenerator:
     @cached_property
     def trajectory(self):
         """Generates required trajectory"""
-        Fcirc = lambda wk, T: np.array([
-            [1, 0, np.sin(wk * T) / wk, (np.cos(wk * T) - 1) / wk],
-            [0, 1, (1 - np.cos(wk * T)) / wk, np.sin(wk * T) / wk],
-            [0, 0, np.cos(wk * T), -np.sin(wk * T)],
-            [0, 0, np.sin(wk * T), np.cos(wk * T)],
-        ])
-        Fst = lambda T: np.array([
-            [1, 0, T, 0],
-            [0, 1, 0, T],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1],
-        ])
-
-        F = lambda wk, T: Fst(T) if wk == 0 else Fcirc(wk, T)
+        F = lambda wk, T: kalman.models.linear(T, 2, 2) if wk == 0 else kalman.models.constant_turn_2d(T, wk)
 
         w, time_series = self.w, self.time_series
         x = np.zeros(shape=(4, len(time_series)))
