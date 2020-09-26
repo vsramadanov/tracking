@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 import kalman.models
 from simulation import Simulation
-from kalman.filter import KF
+from kalman.core import KF
 from trajectory.generators import TrajectoryGenerator
 from sensors.gnss import GNSS
 
