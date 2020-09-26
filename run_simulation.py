@@ -6,6 +6,7 @@ import numpy as np
 from numpy import pi
 import matplotlib.pyplot as plt
 
+import kalman.models
 from simulation import Simulation
 from kalman.filter import KF
 from trajectory.generators import TrajectoryGenerator
@@ -33,12 +34,7 @@ P = np.array([
 
 Q = 0 * np.eye(4)
 R = rms**2 * np.eye(2)
-F = np.array([
-    [1, 0, T, 0],
-    [0, 1, 0, T],
-    [0, 0, 1, 0],
-    [0, 0, 0, 1],
-])
+F = kalman.models.linear(T=T, depth=2, dim=2)
 
 H = np.array([
     [1, 0, 0, 0],
