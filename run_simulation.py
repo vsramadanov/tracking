@@ -4,6 +4,7 @@
 """
 import numpy as np
 from numpy import pi
+import argparse
 import configparser
 from importlib import import_module
 import matplotlib.pyplot as plt
@@ -24,9 +25,7 @@ x_init = np.array([0, 0, vel, vel])
 w = np.where(time < 50, 0, 2 * pi / 100)
 
 trajectory_generator = TrajectoryGenerator(time_series=time, x_initial=x_init, w=w)
-
 sensor = GNSS(drop_velocity=True)
-config = configparser.ConfigParser()
 
 
 def get_filter_model(name):
@@ -38,8 +37,16 @@ def get_filter_model(name):
     return getattr(filter_lib, filter_name)
 
 
+config = configparser.ConfigParser()
+parser = argparse.ArgumentParser(description='script for running simulation')
+parser.add_argument('config', help='configuration file with filter description')
+
+
 if __name__ == '__main__':
-    config.read('simple.conf')
+
+    args = parser.parse_args()
+
+    config.read(args.config)
 
     filter_model = get_filter_model(config['filter']['model'])
     filter_args = {key: eval(val) for key, val in config['filter'].items() if key != 'model'}
