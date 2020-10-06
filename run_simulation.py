@@ -4,12 +4,13 @@
 """
 import numpy as np
 from numpy import pi
+import configparser
+from importlib import import_module
 import matplotlib.pyplot as plt
 
-import kalman.models
-from simulation import Simulation
-from kalman.filter import KF
+import kalman
 from trajectory.generators import TrajectoryGenerator
+from simulation import Simulation
 from sensors.gnss import GNSS
 
 # Define target trajectory
@@ -20,41 +21,34 @@ vel = 2
 rms = 20
 
 x_init = np.array([0, 0, vel, vel])
-w = np.where(time < 50, 0, 2*pi/100)
+w = np.where(time < 50, 0, 2 * pi / 100)
 
 trajectory_generator = TrajectoryGenerator(time_series=time, x_initial=x_init, w=w)
 
-# Define trajectory filter
-P = np.array([
-    [rms**2, 0, 0, 0],
-    [0, rms**2, 0, 0],
-    [0, 0, 1e4, 0],
-    [0, 0, 0, 1e4],
-])
-
-Q = 0 * np.eye(4)
-R = rms**2 * np.eye(2)
-F = kalman.models.linear(T=T, depth=2, dim=2)
-
-H = np.array([
-    [1, 0, 0, 0],
-    [0, 1, 0, 0],
-])
-
-kalman_filter = KF(transition_matrix=F,
-                   covariance_matrix=P,
-                   observation_matrix=H,
-                   process_covariance=Q,
-                   observation_covariance=R)
-
 sensor = GNSS(drop_velocity=True)
+config = configparser.ConfigParser()
 
-sim = Simulation(time=time,
-                 trajectory_generator=trajectory_generator,
-                 trajectory_filter=kalman_filter,
-                 sensor=sensor)
+
+def get_filter_model(name):
+
+    loc = name.rfind('.')
+    filter_lib_name, filter_name = name[:loc], name[loc + 1:]
+    filter_lib = import_module(filter_lib_name)
+
+    return getattr(filter_lib, filter_name)
+
 
 if __name__ == '__main__':
+    config.read('simple.conf')
+
+    filter_model = get_filter_model(config['filter']['model'])
+    filter_args = {key: eval(val) for key, val in config['filter'].items() if key != 'model'}
+    kalman_filter = filter_model(**filter_args)
+
+    sim = Simulation(time=time,
+                     trajectory_generator=trajectory_generator,
+                     trajectory_filter=kalman_filter,
+                     sensor=sensor)
     sim.run()
 
     x_true = sim.trajectory_generator.trajectory[0, :]
