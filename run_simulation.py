@@ -9,20 +9,7 @@ import configparser
 from importlib import import_module
 import matplotlib.pyplot as plt
 
-from trajectory.generators import TrajectoryGenerator
 from simulation import Simulation
-
-# Define target trajectory
-T = 1
-Tmax = 100
-time = np.arange(0, Tmax, T)
-vel = 2
-rms = 20
-
-x_init = np.array([0, 0, vel, vel])
-w = np.where(time < 50, 0, 2 * pi / 100)
-
-trajectory_generator = TrajectoryGenerator(time_series=time, x_initial=x_init, w=w)
 
 
 def get_from_module(name):
@@ -46,14 +33,29 @@ def get_config_args(config):
     return {key: parse(val) for key, val in config.items() if key != 'model'}
 
 
+class Parameters:
+    pass
+
+
 config = configparser.ConfigParser()
 parser = argparse.ArgumentParser(description='script for running simulation')
 parser.add_argument('config', help='configuration file with filter description')
 
 if __name__ == '__main__':
+
     args = parser.parse_args()
 
     config.read(args.config)
+
+    pars = Parameters()
+    for key, val in config['parameters'].items():
+        setattr(pars, key, parse(val))
+
+    time = np.arange(pars.start, pars.end, pars.step)
+
+    trajectory_model = get_from_module(config['trajectory']['model'])
+    trajectory_args = get_config_args(config['trajectory'])
+    trajectory_generator = trajectory_model(**trajectory_args)
 
     filter_model = get_from_module(config['filter']['model'])
     filter_args = get_config_args(config['filter'])
