@@ -9,10 +9,8 @@ import configparser
 from importlib import import_module
 import matplotlib.pyplot as plt
 
-import kalman
 from trajectory.generators import TrajectoryGenerator
 from simulation import Simulation
-from sensors.gnss import GNSS
 
 # Define target trajectory
 T = 1
@@ -25,32 +23,45 @@ x_init = np.array([0, 0, vel, vel])
 w = np.where(time < 50, 0, 2 * pi / 100)
 
 trajectory_generator = TrajectoryGenerator(time_series=time, x_initial=x_init, w=w)
-sensor = GNSS(drop_velocity=True)
 
 
-def get_filter_model(name):
-
+def get_from_module(name):
     loc = name.rfind('.')
-    filter_lib_name, filter_name = name[:loc], name[loc + 1:]
-    filter_lib = import_module(filter_lib_name)
+    module_name, function_name = name[:loc], name[loc + 1:]
+    module = import_module(module_name)
 
-    return getattr(filter_lib, filter_name)
+    return getattr(module, function_name)
+
+
+def parse(expr):
+    try:
+        return eval(expr)
+    except NameError:
+        loc = expr.rfind('(')
+        func = get_from_module(expr[:loc])
+        return eval('func' + expr[loc:])
+
+
+def get_config_args(config):
+    return {key: parse(val) for key, val in config.items() if key != 'model'}
 
 
 config = configparser.ConfigParser()
 parser = argparse.ArgumentParser(description='script for running simulation')
 parser.add_argument('config', help='configuration file with filter description')
 
-
 if __name__ == '__main__':
-
     args = parser.parse_args()
 
     config.read(args.config)
 
-    filter_model = get_filter_model(config['filter']['model'])
-    filter_args = {key: eval(val) for key, val in config['filter'].items() if key != 'model'}
+    filter_model = get_from_module(config['filter']['model'])
+    filter_args = get_config_args(config['filter'])
     kalman_filter = filter_model(**filter_args)
+
+    sensor_model = get_from_module(config['sensor']['model'])
+    sensor_args = get_config_args(config['sensor'])
+    sensor = sensor_model(**sensor_args)
 
     sim = Simulation(time=time,
                      trajectory_generator=trajectory_generator,
